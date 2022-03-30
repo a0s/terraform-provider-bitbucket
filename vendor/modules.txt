@@ -125,6 +125,7 @@ github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/toproto
 github.com/hashicorp/terraform-plugin-go/tfprotov5/server
 github.com/hashicorp/terraform-plugin-go/tfprotov5/tftypes
 # github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.3
+## explicit
 github.com/hashicorp/terraform-plugin-sdk/v2/diag
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource
@@ -169,6 +170,7 @@ github.com/mitchellh/reflectwalk
 # github.com/oklog/run v1.0.0
 github.com/oklog/run
 # github.com/satori/go.uuid v1.2.0
+## explicit
 github.com/satori/go.uuid
 # github.com/ulikunitz/xz v0.5.8
 github.com/ulikunitz/xz
