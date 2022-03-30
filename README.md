@@ -48,11 +48,17 @@ $ make build
 Using the provider
 ----------------------
 
+Username/apppassword creds can be obtained at https://bitbucket.org/account/settings/app-passwords/
+
+OAuth creds can be obtained at https://bitbucket.org/%WORKSPACE_ID%/workspace/settings/api
+
 ```hcl
 # Configure the Bitbucket Provider
 provider "bitbucket" {
-  username = "GobBluthe"
-  password = "idoillusions" # you can also use app passwords
+  username = "GobBluthe"       # or env BITBUCKET_USERNAME
+  password = "idoillusions"    # or env BITBUCKET_PASSWORD, you can also use app passwords
+  oauth_key = "OAUTHKEY"       # or env BITBUCKET_OAUTH_KEY
+  oauth_secret = "OAUTHSECRET" # or env BITBUCKET_OAUTH_SECRET
 }
 
 # Manage your repository

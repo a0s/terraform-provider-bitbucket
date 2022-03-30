@@ -3,11 +3,15 @@ package bitbucket
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
 // Error represents a error from the bitbucket api.
@@ -25,22 +29,36 @@ func (e Error) Error() string {
 }
 
 const (
-	// BitbucketEndpoint is the fqdn used to talk to bitbucket
-	BitbucketEndpoint string = "https://api.bitbucket.org/"
+	// BitbucketEndpointAPI is the fqdn used to talk to bitbucket
+	BitbucketEndpointAPI string = "https://api.bitbucket.org/"
+	// BitbucketEndpoint is the fqdb used to talk to bitbucket's site
+	BitbucketEndpoint string = "https://bitbucket.org"
 )
+
+type OAuthAccessToken struct {
+	Scopes       string `json:"scopes"`
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+	State        string `json:"state"`
+	RefreshToken string `json:"refresh_token"`
+}
 
 // Client is the base internal Client to talk to bitbuckets API. This should be a username and password
 // the password should be a app-password.
 type Client struct {
-	Username   string
-	Password   string
-	HTTPClient *http.Client
+	Username         string
+	Password         string
+	OAuthKey         string
+	OAuthSecret      string
+	OAuthAccessToken *OAuthAccessToken
+	OAuthExpiration  int64
+	HTTPClient       *http.Client
 }
 
 // Do Will just call the bitbucket api but also add auth to it and some extra headers
 func (c *Client) Do(method, endpoint string, payload *bytes.Buffer) (*http.Response, error) {
-
-	absoluteendpoint := BitbucketEndpoint + endpoint
+	absoluteendpoint := BitbucketEndpointAPI + endpoint
 	log.Printf("[DEBUG] Sending request to %s %s", method, absoluteendpoint)
 
 	var bodyreader io.Reader
@@ -55,7 +73,33 @@ func (c *Client) Do(method, endpoint string, payload *bytes.Buffer) (*http.Respo
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	if c.Username != "" && c.Password != "" {
+		req.SetBasicAuth(c.Username, c.Password)
+	} else if c.OAuthKey != "" && c.OAuthSecret != "" {
+		if c.OAuthExpiration == 0 {
+			err := c.OAuthGetAccessToken()
+			if err != nil {
+				return nil, fmt.Errorf("OAuthGetAccessToken: %w", *err)
+			}
+		} else {
+			if c.OAuthExpiration <= time.Now().Unix() {
+				errRefresh := c.OAuthRefreshAccessToken()
+				if errRefresh != nil {
+					errAccess := c.OAuthGetAccessToken()
+					if errAccess != nil {
+						var errStrings []string
+						errStrings = append(errStrings, fmt.Errorf("OAuthRefreshAccessToken: %w", *errRefresh).Error())
+						errStrings = append(errStrings, fmt.Errorf("OAuthGetAccessToken: %w", *errAccess).Error())
+						return nil, fmt.Errorf(strings.Join(errStrings, "\n"))
+					}
+				}
+			}
+		}
+		req.Header.Del("Authorization")
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.OAuthAccessToken.AccessToken))
+	} else {
+		return nil, errors.New("auth: unknown method")
+	}
 
 	if payload != nil {
 		// Can cause bad request when putting default reviews if set.
@@ -88,6 +132,73 @@ func (c *Client) Do(method, endpoint string, payload *bytes.Buffer) (*http.Respo
 
 	}
 	return resp, err
+}
+
+func (c *Client) OAuthGetAccessToken() *error {
+	client := &http.Client{}
+
+	form := url.Values{}
+	form.Add("grant_type", "client_credentials")
+	reader := strings.NewReader(form.Encode())
+
+	request, err := http.NewRequest("POST", BitbucketEndpoint+"/site/oauth2/access_token", reader)
+	if err != nil {
+		return &err
+	}
+	request.PostForm = form
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.SetBasicAuth(c.OAuthKey, c.OAuthSecret)
+
+	response, err := client.Do(request)
+	if err != nil {
+		return &err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return &err
+	}
+	err = json.Unmarshal(body, c.OAuthAccessToken)
+	if err != nil {
+		return &err
+	}
+	c.OAuthExpiration = time.Now().Unix() + c.OAuthAccessToken.ExpiresIn
+
+	return nil
+}
+
+func (c *Client) OAuthRefreshAccessToken() *error {
+	client := &http.Client{}
+
+	form := url.Values{}
+	form.Add("grant_type", "client_credentials")
+	form.Add("refresh_token", c.OAuthAccessToken.RefreshToken)
+	reader := strings.NewReader(form.Encode())
+
+	request, err := http.NewRequest("POST", BitbucketEndpoint+"/site/oauth2/access_token", reader)
+	if err != nil {
+		return &err
+	}
+	request.PostForm = form
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.SetBasicAuth(c.OAuthKey, c.OAuthSecret)
+
+	response, err := client.Do(request)
+	if err != nil {
+		return &err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return &err
+	}
+	err = json.Unmarshal(body, c.OAuthAccessToken)
+	if err != nil {
+		return &err
+	}
+	c.OAuthExpiration = time.Now().Unix() + c.OAuthAccessToken.ExpiresIn
+
+	return nil
 }
 
 // Get is just a helper method to do but with a GET verb

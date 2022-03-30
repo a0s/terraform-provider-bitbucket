@@ -12,14 +12,24 @@ func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"username": {
-				Required:    true,
+				Optional:    true,
 				Type:        schema.TypeString,
 				DefaultFunc: schema.EnvDefaultFunc("BITBUCKET_USERNAME", nil),
 			},
 			"password": {
+				Optional:    true,
 				Type:        schema.TypeString,
-				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("BITBUCKET_PASSWORD", nil),
+			},
+			"oauth_key": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("BITBUCKET_OAUTH_KEY", nil),
+			},
+			"oauth_secret": {
+				Optional:    true,
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("BITBUCKET_OAUTH_SECRET", nil),
 			},
 		},
 		ConfigureFunc: providerConfigure,
@@ -41,9 +51,12 @@ func Provider() *schema.Provider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client := &Client{
-		Username:   d.Get("username").(string),
-		Password:   d.Get("password").(string),
-		HTTPClient: &http.Client{},
+		Username:         d.Get("username").(string),
+		Password:         d.Get("password").(string),
+		OAuthKey:         d.Get("oauth_key").(string),
+		OAuthSecret:      d.Get("oauth_secret").(string),
+		HTTPClient:       &http.Client{},
+		OAuthAccessToken: &OAuthAccessToken{},
 	}
 
 	return client, nil
