@@ -4,7 +4,7 @@ This is a fork of [thamdub/terraform-provider-bitbucket](https://github.com/tham
 
 Unmaintained, maintainers needed! I just took the archived repository, and released it to the Terraform Registry. I'm not a Go developer, so I'll not be able to maintain this repository in the long run. PRs are welcome, and I'll try to merge and release them as frequently as possible.
 
-If you would like Atlassian to take ownership of the provider, you can voice your opinion at [BCLOUD-17209](https://jira.atlassian.com/browse/BCLOUD-17209).
+If you would like Atlassian to take ownership of the provider, you can voice your opinion at [BCLOUD-21102](https://jira.atlassian.com/browse/BCLOUD-21102).
 
 ## History
 
@@ -20,7 +20,6 @@ Terraform Provider
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
 
 Requirements
 ------------
